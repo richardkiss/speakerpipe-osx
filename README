@@ -1,11 +1,19 @@
-This is an early release of "speakerpipe" and "mikepipe", two audio tools for Mac OS X.
+This is a release of "speakerpipe" and "mikepipe", two command-line audio tools for Mac OS X that show how to
+use audio in and audio out on Mac OS X. 
 
-The primary reason for release is to make life a little easier for CoreAudio framework users. The audiopipein and audiopipeout objects make it much easier to do simple audio work than does the CoreAudio framework.
+The primary reason for release is to make life a little easier for CoreAudio framework users. The audiopipein
+and audiopipeout objects make it much easier to do simple audio work than does the CoreAudio framework. The
+resampler is a quick hack to resample audio since the CoreAudio framework only seems to be able to handle 44.1
+kHz. 
 
-The CoreAudio framework runs a callback in another thread to get samples to send to the speaker and to post data from the microphone. This is much more difficult than usual on UNIX, where doing simple things with audio means just dumping bytes down a pipe to play, or reading from a pipe to record. The functions simulate that, and the command-line tools show an example of usage.
+The CoreAudio framework runs a callback in another thread to get samples to send to the speaker and to post data
+from the microphone. This is much more difficult than usual on UNIX, where doing simple things with audio means
+just dumping bytes down a pipe to play, or reading from a pipe to record. The functions simulate that, and the
+command-line tools show an example of usage. 
 
-Example:
---------
+-------
+Example
+-------
 
 $ ./mikepipe > record.example
 
@@ -14,6 +22,10 @@ $ ./mikepipe > record.example
 $ ./speakerpipe < record.example
 
 You should hear back what you just recorded.
+
+-----
+Usage
+-----
 
 usage: speakerpipe [-v] [-c channelCount (1 or 2)] [-s|-u|-f] [-b|-w|-l] [-x] [-r rate]
  -v : show version and exit
@@ -28,6 +40,21 @@ usage: speakerpipe [-v] [-c channelCount (1 or 2)] [-s|-u|-f] [-b|-w|-l] [-x] [-
 
 mikepipe uses similar options.
 
-This code is licensed under a BSD-style license. See the header in any file for more information.
+--------------
+Known Problems
+--------------
 
-Comments to Richard Kiss, <him@richardkiss.com>.
+Neither audio in nor audio out has working API to finish, so each tool must be terminated with control-C. 
+
+Need to handle mapping from mono to stereo differently. The hack currently in speakerpipe doubles the resample
+frequency and diverts every second sample to a different channel. If resampling to a different frequency, this
+yields different output for the l eft and right channels. 
+
+-------
+License
+-------
+
+This code is licensed under a BSD-style license. See the header in any file for more information. 
+
+Comments to Richard Kiss, <him@richardkiss.com>. 
+
