@@ -84,7 +84,7 @@ int main(int argc, char *argv[]) {
   argc -= optind;
   argv += optind;
 
-  if (optind > 0) usage();
+  if (argc > 0) usage();
 
   /* figure sample type */
   if ((sampleFormat == FLOAT) && (swapEndian)) {
