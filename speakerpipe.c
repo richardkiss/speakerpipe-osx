@@ -55,7 +55,7 @@ int main(int argc, char *argv[]) {
   float sampleRate = 44100;
   int bytesPerSample = 2;
 
-  audiopipeout ap;
+  audiopipeout *ap;
 
   tool = argv[0];
   while ((ch = getopt(argc, argv, "c:sufbwlxr:v")) != -1)
@@ -109,7 +109,7 @@ int main(int argc, char *argv[]) {
 
   if ((channelCount < 1) || (channelCount > 2)) usage();
 
-  init_audiopipeout(&ap, sampleRate, channelCount == 1, 131072);
+  ap = apo_new(sampleRate, channelCount == 1, 131072);
 
   /* a couple of macros to make life easier */
 
@@ -117,32 +117,33 @@ int main(int argc, char *argv[]) {
 while (1) {\
     count = fread(buf, bytesPerSample, 4096, stdin);\
     if (count == 0) break;\
-    WRITE(&ap, (BUFFERTYPE*)buf, count);}
+    WRITE(ap, (BUFFERTYPE*)buf, count);}
 
 #define FEEDSWAPLOOP(BUFFERTYPE, SWAP, WRITE) \
 while (1) {\
     count = fread(buf, bytesPerSample, 4096, stdin);\
     if (count == 0) break;\
     if (swapEndian) SWAP((BUFFERTYPE*)buf, count);\
-    WRITE(&ap, (BUFFERTYPE*)buf, count);}
+    WRITE(ap, (BUFFERTYPE*)buf, count);}
 
   switch (sampleFormat) {
     char buf[4096*8];
     unsigned count;
     
   case SIGNED:
-    if (bytesPerSample == 1) FEEDLOOP(char, write_s8_samples)
-    else if (bytesPerSample == 2) FEEDSWAPLOOP(short, swap_16_samples, write_s16_samples)
-    else if (bytesPerSample == 4) FEEDSWAPLOOP(long, swap_32_samples, write_s32_samples);
+    if (bytesPerSample == 1) FEEDLOOP(char, apo_write_s8_samples)
+    else if (bytesPerSample == 2) FEEDSWAPLOOP(short, swap_16_samples, apo_write_s16_samples)
+    else if (bytesPerSample == 4) FEEDSWAPLOOP(long, swap_32_samples,  apo_write_s32_samples);
     break;
   case UNSIGNED:
-    if (bytesPerSample == 1) FEEDLOOP(char, write_u8_samples)
-    else if (bytesPerSample == 2) FEEDSWAPLOOP(unsigned short, swap_16_samples, write_u16_samples)
-    else if (bytesPerSample == 4) FEEDSWAPLOOP(unsigned long, swap_32_samples, write_u32_samples);
+    if (bytesPerSample == 1) FEEDLOOP(char, apo_write_u8_samples)
+    else if (bytesPerSample == 2) FEEDSWAPLOOP(unsigned short, swap_16_samples, apo_write_u16_samples)
+    else if (bytesPerSample == 4) FEEDSWAPLOOP(unsigned long, swap_32_samples, apo_write_u32_samples);
     break;
   case FLOAT:
-    FEEDLOOP(float, write_float_samples);
+    FEEDLOOP(float, apo_write_float_samples);
   }
 
   while (1) sleep(5);
+  apo_free(ap);
 }

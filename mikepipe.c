@@ -61,7 +61,7 @@ int main(int argc, char *argv[]) {
   int bytesPerSample = 2;
   char sampleBuffer[MAX_FRAME_COUNT * MAX_FRAME_SIZE];
   ReadSamplesFunction readSamplesFunction;
-  audiopipein ap;
+  audiopipein *ap;
 
   tool = argv[0];
   while ((ch = getopt(argc, argv, "c:sufbwlxr:v")) != -1)
@@ -115,25 +115,25 @@ int main(int argc, char *argv[]) {
 
   switch (sampleFormat) {
   case SIGNED:
-    if (bytesPerSample == 1) readSamplesFunction = (ReadSamplesFunction)read_s8_samples;
-    else if (bytesPerSample == 2) readSamplesFunction = (ReadSamplesFunction)read_s16_samples;
-    else if (bytesPerSample == 4) readSamplesFunction = (ReadSamplesFunction)read_s32_samples;
+    if (bytesPerSample == 1) readSamplesFunction = (ReadSamplesFunction)api_read_s8_samples;
+    else if (bytesPerSample == 2) readSamplesFunction = (ReadSamplesFunction)api_read_s16_samples;
+    else if (bytesPerSample == 4) readSamplesFunction = (ReadSamplesFunction)api_read_s32_samples;
     break;
   case UNSIGNED:
-    if (bytesPerSample == 1) readSamplesFunction = (ReadSamplesFunction)read_u8_samples;
-    else if (bytesPerSample == 2) readSamplesFunction = (ReadSamplesFunction)read_u16_samples;
-    else if (bytesPerSample == 4) readSamplesFunction = (ReadSamplesFunction)read_u32_samples;
+    if (bytesPerSample == 1) readSamplesFunction = (ReadSamplesFunction)api_read_u8_samples;
+    else if (bytesPerSample == 2) readSamplesFunction = (ReadSamplesFunction)api_read_u16_samples;
+    else if (bytesPerSample == 4) readSamplesFunction = (ReadSamplesFunction)api_read_u32_samples;
     break;
   case FLOAT:
-    readSamplesFunction = (ReadSamplesFunction)read_float_samples;
+    readSamplesFunction = (ReadSamplesFunction)api_read_float_samples;
   }
 
   if ((channelCount < 1) || (channelCount > 2)) usage();
 
-  init_audiopipein(&ap, sampleRate, channelCount == 1, MAX_FRAME_COUNT);
+  ap = api_new(sampleRate, channelCount == 1, MAX_FRAME_COUNT);
 
   while (1) {
-    unsigned frames = readSamplesFunction(&ap, sampleBuffer, MAX_FRAME_COUNT);
+    unsigned frames = readSamplesFunction(ap, sampleBuffer, MAX_FRAME_COUNT);
     if (swapEndian) {
       if (bytesPerSample == 2) swap_16_samples((short*)sampleBuffer, frames);
       if (bytesPerSample == 4) swap_32_samples((long*)sampleBuffer, frames);

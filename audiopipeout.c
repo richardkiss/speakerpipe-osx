@@ -52,13 +52,13 @@ static void resamplerCallback(void *context, const float *resampledData, unsigne
   addBytes(tq, resampledData, resampledDataCount * sizeof(float));
 }
 
-void init_audiopipeout(audiopipeout *ap, float rate, int isMono, int frameBufferSize)
+audiopipeout *apo_new(float rate, int isMono, int frameBufferSize)
 {
   OSStatus s;
   AudioDeviceID outputDevice;
   Boolean writeable;
   UInt32 ioPropertyDataSize;
-  
+  audiopipeout *ap = (audiopipeout*)malloc(sizeof(audiopipeout));
   init_threadedqueue(&ap->tq, frameBufferSize * sizeof(float));
   if (isMono) rate = rate / 2.0;
   ap->resampler = NULL;
@@ -73,6 +73,7 @@ void init_audiopipeout(audiopipeout *ap, float rate, int isMono, int frameBuffer
 
   s = AudioDeviceAddIOProc(outputDevice, audioProc, ap);
   s = AudioDeviceStart(outputDevice, audioProc);
+  return ap;
 }
 
 #define DECLARE(NAME, TYPE, SUBTRACTAND, DIVISOR) \
@@ -90,19 +91,19 @@ void NAME(audiopipeout *ap, TYPE samples[], unsigned frameCount) { \
     while (count-- > 0) { \
       *dst++ = (*src++ - SUBTRACTAND) / ((float)DIVISOR); \
     } \
-    write_float_samples(ap, fBuf, toConvert); \
+    apo_write_float_samples(ap, fBuf, toConvert); \
     frameCount -= toConvert; \
   } \
 }
 
-DECLARE(write_s8_samples, char, 0, 128)
-DECLARE(write_u8_samples, unsigned char, 128, 128)
-DECLARE(write_s16_samples, short, 0, 32768)
-DECLARE(write_u16_samples, unsigned short, 32768, 32768)
-DECLARE(write_s32_samples, long, 0, 0x80000000)
-DECLARE(write_u32_samples, unsigned long, 2147483648.0, 0x80000000)
+DECLARE(apo_write_s8_samples, char, 0, 128)
+DECLARE(apo_write_u8_samples, unsigned char, 128, 128)
+DECLARE(apo_write_s16_samples, short, 0, 32768)
+DECLARE(apo_write_u16_samples, unsigned short, 32768, 32768)
+DECLARE(apo_write_s32_samples, long, 0, 0x80000000)
+DECLARE(apo_write_u32_samples, unsigned long, 2147483648.0, 0x80000000)
 
-void write_float_samples(audiopipeout *ap, float samples[], unsigned frameCount)
+void apo_write_float_samples(audiopipeout *ap, float samples[], unsigned frameCount)
 {
   /* should we adjust for rate shift? */
   if (ap->resampler != NULL) {
@@ -113,14 +114,15 @@ void write_float_samples(audiopipeout *ap, float samples[], unsigned frameCount)
   }
 }
 
-void wait_until_done(audiopipeout *ap)
+void apo_wait_until_done(audiopipeout *ap)
 {
   /* TODO */
 }
 
-void destroy_audiopipeout(audiopipeout *ap)
+void apo_free(audiopipeout *ap)
 {
   destroy_threadedqueue(&ap->tq);
   if (ap->resampler) resampler_free(ap->resampler);
+  free(ap);
 }
 

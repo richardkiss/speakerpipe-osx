@@ -43,16 +43,16 @@ typedef struct {
 
 
 /* Larger buffers reduces dropout probability. */
-void init_audiopipein(audiopipein *ap, float rate, int isMono, int frameBufferSize);
+audiopipein *api_new(float rate, int isMono, int frameBufferSize);
 
-unsigned read_s8_samples(audiopipein *ap, char *samples, unsigned maxFrameCount);
-unsigned read_u8_samples(audiopipein *ap, unsigned char *samples, unsigned maxFrameCount);
-unsigned read_s16_samples(audiopipein *ap, short *samples, unsigned maxFrameCount);
-unsigned read_u16_samples(audiopipein *ap, unsigned short *samples, unsigned maxFrameCount);
-unsigned read_s32_samples(audiopipein *ap, long *samples, unsigned maxFrameCount);
-unsigned read_u32_samples(audiopipein *ap, unsigned long *samples, unsigned maxFrameCount);
-unsigned read_float_samples(audiopipein *ap, float *samples, unsigned maxFrameCount);
+unsigned api_read_s8_samples(audiopipein *ap, char *samples, unsigned maxFrameCount);
+unsigned api_read_u8_samples(audiopipein *ap, unsigned char *samples, unsigned maxFrameCount);
+unsigned api_read_s16_samples(audiopipein *ap, short *samples, unsigned maxFrameCount);
+unsigned api_read_u16_samples(audiopipein *ap, unsigned short *samples, unsigned maxFrameCount);
+unsigned api_read_s32_samples(audiopipein *ap, long *samples, unsigned maxFrameCount);
+unsigned api_read_u32_samples(audiopipein *ap, unsigned long *samples, unsigned maxFrameCount);
+unsigned api_read_float_samples(audiopipein *ap, float *samples, unsigned maxFrameCount);
 
-void destroy_audiopipein(audiopipein *ap);
+void api_free(audiopipein *ap);
 
 #endif /* __audiopipein_h__ */

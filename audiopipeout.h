@@ -35,18 +35,18 @@ typedef struct {
 } audiopipeout;
 
 /* Larger buffers reduces dropout probability. */
-void init_audiopipeout(audiopipeout *ap, float rate, int isMono, int frameBufferSize);
+audiopipeout *apo_new(float rate, int isMono, int frameBufferSize);
 
-void write_s8_samples(audiopipeout *ap, char samples[], unsigned frameCount);
-void write_u8_samples(audiopipeout *ap, unsigned char samples[], unsigned frameCount);
-void write_s16_samples(audiopipeout *ap, short samples[], unsigned frameCount);
-void write_u16_samples(audiopipeout *ap, unsigned short samples[], unsigned frameCount);
-void write_s32_samples(audiopipeout *ap, long samples[], unsigned frameCount);
-void write_u32_samples(audiopipeout *ap, unsigned long samples[], unsigned frameCount);
-void write_float_samples(audiopipeout *ap, float samples[], unsigned frameCount);
+void apo_write_s8_samples(audiopipeout *ap, char samples[], unsigned frameCount);
+void apo_write_u8_samples(audiopipeout *ap, unsigned char samples[], unsigned frameCount);
+void apo_write_s16_samples(audiopipeout *ap, short samples[], unsigned frameCount);
+void apo_write_u16_samples(audiopipeout *ap, unsigned short samples[], unsigned frameCount);
+void apo_write_s32_samples(audiopipeout *ap, long samples[], unsigned frameCount);
+void apo_write_u32_samples(audiopipeout *ap, unsigned long samples[], unsigned frameCount);
+void apo_write_float_samples(audiopipeout *ap, float samples[], unsigned frameCount);
 
-void wait_until_done(audiopipeout *ap);
+void apo_wait_until_done(audiopipeout *ap);
 
-void destroy_audiopipeout(audiopipeout *ap);
+void apo_free(audiopipeout *ap);
 
 #endif /* __audiopipeout_h__ */

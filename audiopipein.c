@@ -53,12 +53,13 @@ static OSStatus audioProc(AudioDeviceID 	inDevice,
   return 0;
 }
 
-void init_audiopipein(audiopipein *ap, float rate, int isMono, int frameBufferSize)
+audiopipein *api_new(float rate, int isMono, int frameBufferSize)
 {
   OSStatus s;
   AudioDeviceID inputDevice;
   Boolean writeable;
   UInt32 ioPropertyDataSize;
+  audiopipein *ap = (audiopipein*)malloc(sizeof(audiopipein));
   
   init_threadedqueue(&ap->tq, frameBufferSize * sizeof(float));
   if (isMono) rate = rate / 2.0;
@@ -74,6 +75,7 @@ void init_audiopipein(audiopipein *ap, float rate, int isMono, int frameBufferSi
 
   s = AudioDeviceAddIOProc(inputDevice, audioProc, ap);
   s = AudioDeviceStart(inputDevice, audioProc);
+  return ap;
 }
 
 #define DECLARE(NAME, TYPE, ADDITOR, MULTIPLIER) \
@@ -81,7 +83,7 @@ unsigned NAME(audiopipein *ap, TYPE samples[], unsigned maxFrameCount) { \
   unsigned samplesRead, loop; \
   float *fsamples = (float*)alloca(2048 * sizeof(float)); \
   if (maxFrameCount > 2048) maxFrameCount = 2048; \
-  samplesRead = read_float_samples(ap, fsamples, maxFrameCount); \
+  samplesRead = api_read_float_samples(ap, fsamples, maxFrameCount); \
   loop = samplesRead; \
   while (loop-- > 0) { \
     *samples++ = *fsamples++ * MULTIPLIER + ADDITOR; \
@@ -89,14 +91,14 @@ unsigned NAME(audiopipein *ap, TYPE samples[], unsigned maxFrameCount) { \
   return samplesRead; \
 }
 
-DECLARE(read_s8_samples, char, 0, 0x7f)
-DECLARE(read_s16_samples, short, 0, 0x7fff)
-DECLARE(read_s32_samples, long, 0, 0x7fffffff)
-DECLARE(read_u8_samples, unsigned char, 0x80, 0x7f)
-DECLARE(read_u16_samples, unsigned short, 0x8000, 0x7fff)
-DECLARE(read_u32_samples, unsigned long, ((unsigned)0x80000000), 0x7fffffff)
+DECLARE(api_read_s8_samples, char, 0, 0x7f)
+DECLARE(api_read_s16_samples, short, 0, 0x7fff)
+DECLARE(api_read_s32_samples, long, 0, 0x7fffffff)
+DECLARE(api_read_u8_samples, unsigned char, 0x80, 0x7f)
+DECLARE(api_read_u16_samples, unsigned short, 0x8000, 0x7fff)
+DECLARE(api_read_u32_samples, unsigned long, ((unsigned)0x80000000), 0x7fffffff)
 
-unsigned read_float_samples(audiopipein *ap, float *samples, unsigned maxFrameCount)
+unsigned api_read_float_samples(audiopipein *ap, float *samples, unsigned maxFrameCount)
 {
   /* read 'em from queue */
   unsigned bytesToMove = waitForMinimumBytes(&ap->tq, sizeof(float));
@@ -106,9 +108,10 @@ unsigned read_float_samples(audiopipein *ap, float *samples, unsigned maxFrameCo
   return bytesToMove / sizeof(float);
 }
 
-void destroy_audiopipein(audiopipein *ap)
+void api_free(audiopipein *ap)
 {
   destroy_threadedqueue(&ap->tq);
   if (ap->resampler) resampler_free(ap->resampler);
+  free(ap);
 }
 
