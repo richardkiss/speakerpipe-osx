@@ -39,16 +39,14 @@ typedef struct
   unsigned tailPointer;
   unsigned bytesInQueue;
   unsigned maxDataSize;
-  int isAtEnd;
 } threadedqueue;
 
 void init_threadedqueue(threadedqueue *q, unsigned bufferSize);
 void addBytes(threadedqueue *q, const void *bytesPtr, unsigned length);
 unsigned peekBytes(threadedqueue *q, void **aBytesPtr);
 void removeBytes(threadedqueue *q, unsigned aByteCount);
-int waitForMinimumBytes(threadedqueue *q, unsigned minimum);
+unsigned waitForMinimumBytes(threadedqueue *q, unsigned minimum);
 unsigned removeBytesTo(threadedqueue *q, void *bytesPtr, unsigned minimum, unsigned maximum);
-void end_of_queue(threadedqueue *q);
 void destroy_threadedqueue(threadedqueue *q);
 
 #endif /* __threaded_queue_h__ */

@@ -34,7 +34,6 @@ void init_threadedqueue(threadedqueue *q, unsigned bufferSize)
   q->headPointer = 0;
   q->tailPointer = 0;
   q->bytesInQueue = 0;
-  q->isAtEnd = 0;
   q->maxDataSize = bufferSize;
 }
 
@@ -44,12 +43,6 @@ void destroy_threadedqueue(threadedqueue *q)
   pthread_cond_destroy(&q->addDataLock);
   pthread_mutex_destroy(&q->dataLock);
   free(q->buffer);
-}
-
-void end_of_queue(threadedqueue *q)
-{
-  q->isAtEnd = 1;
-  pthread_cond_broadcast(&q->addDataLock);
 }
 
 void addBytes(threadedqueue *q, const void *bytesPtr, unsigned length)
@@ -157,14 +150,15 @@ unsigned spaceUsed(threadedqueue *q)
   return r;
 }
 
-int waitForMinimumBytes(threadedqueue *q, unsigned minimum)
+unsigned waitForMinimumBytes(threadedqueue *q, unsigned minimum)
 {
-  int gotem = 0;
+  unsigned r;
   pthread_mutex_lock(&q->dataLock);
-  while ((q->bytesInQueue < minimum) && (!q->isAtEnd)) {
+  while ((r = q->bytesInQueue) < minimum) {
     pthread_cond_wait(&q->addDataLock, &q->dataLock);
   }
   pthread_mutex_unlock(&q->dataLock);
+  return r;
 }
 
 unsigned removeBytesTo(threadedqueue *q, void *bytesPtr, unsigned minimum, unsigned maximum)
@@ -173,7 +167,6 @@ unsigned removeBytesTo(threadedqueue *q, void *bytesPtr, unsigned minimum, unsig
   char *dest = (char*)bytesPtr;
   void *src;
   unsigned available;
-  int exitEarly;
 
   do {
     unsigned bytesToReturn;
@@ -197,15 +190,13 @@ unsigned removeBytesTo(threadedqueue *q, void *bytesPtr, unsigned minimum, unsig
 
     pthread_cond_broadcast(&q->removeDataLock);
 
-    exitEarly = ((q->bytesInQueue == 0) && (q->isAtEnd));
-
     pthread_mutex_unlock(&q->dataLock);
 
     minimum -= available;
     maximum -= available;
     totalWrit += available;
     dest += available;
-  } while ((minimum > 0) && (!exitEarly));
+  } while (minimum > 0);
   return totalWrit;
 }
 

@@ -32,14 +32,6 @@
 typedef struct {
   threadedqueue tq;
   Resampler *resampler;
-  unsigned channelCount;
-  float sampleRateInHZ;
-  unsigned byteCountAfterWhichToStart;
-  unsigned bufferSizeInBytes;
-  float startAfterTime;
-  unsigned bytesPerSample;
-  unsigned readByteCount;
-  unsigned sampleRepeatCount;
 } audiopipeout;
 
 /* Larger buffers reduces dropout probability. */
