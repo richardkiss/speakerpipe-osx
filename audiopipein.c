@@ -75,7 +75,7 @@ void init_audiopipein(audiopipein *ap, float rate, int isMono, int frameBufferSi
   if (isMono) rate = rate / 2.0;
   ap->resampler = NULL;
   if (rate != 44100.0) {
-    ap->resampler = createResampler(rate, 44100.0, resamplerCallback);
+    ap->resampler = createResampler(44100.0, rate, resamplerCallback);
     setBufferSize(ap->resampler, 1024);
     setContext(ap->resampler, ap);
   }
@@ -92,9 +92,7 @@ unsigned read_s16_samples(audiopipein *ap, short *samples, unsigned maxFrameCoun
   unsigned samplesRead, loop;
   float *fsamples = (float*)alloca(2048 * sizeof(float));
   if (maxFrameCount > 2048) maxFrameCount = 2048;
-  fprintf(stderr,"trying to read %d\n", maxFrameCount);
   samplesRead = read_float_samples(ap, fsamples, maxFrameCount);
-  fprintf(stderr,"did read %d\n", samplesRead);
 
   loop = samplesRead;
   while (loop-- > 0) {
@@ -107,7 +105,7 @@ unsigned read_float_samples(audiopipein *ap, float *samples, unsigned maxFrameCo
 {
   /* read 'em from queue */
   unsigned bytesToMove = waitForMinimumBytes(&ap->tq, sizeof(float));
-  bytesToMove = bytesToMove & (~7);
+  bytesToMove = bytesToMove & (~(sizeof(float)-1));
   if (bytesToMove > maxFrameCount * sizeof(float)) bytesToMove = maxFrameCount * sizeof(float);
   bytesToMove = removeBytesTo(&ap->tq, samples, bytesToMove, bytesToMove);
   return bytesToMove / sizeof(float);

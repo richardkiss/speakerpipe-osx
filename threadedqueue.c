@@ -171,7 +171,7 @@ unsigned removeBytesTo(threadedqueue *q, void *bytesPtr, unsigned minimum, unsig
   do {
     unsigned bytesToReturn;
     unsigned bytesAvailableAtEnd;
-    if (minimum > 0) waitForMinimumBytes(q, 1);
+    if (minimum > 0) waitForMinimumBytes(q, minimum);
 
     pthread_mutex_lock(&q->dataLock);
     available = q->bytesInQueue;
