@@ -102,7 +102,7 @@ DECLARE(write_u8_samples, unsigned char, 128, 128)
 DECLARE(write_s16_samples, short, 0, 32768)
 DECLARE(write_u16_samples, unsigned short, 32768, 32768)
 DECLARE(write_s32_samples, long, 0, 0x80000000)
-DECLARE(write_u32_samples, unsigned long, 0x80000000, 0x80000000)
+DECLARE(write_u32_samples, unsigned long, 2147483648.0, 0x80000000)
 
 void write_float_samples(audiopipeout *ap, float samples[], unsigned frameCount)
 {

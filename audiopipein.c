@@ -87,19 +87,26 @@ void init_audiopipein(audiopipein *ap, float rate, int isMono, int frameBufferSi
   s = AudioDeviceStart(inputDevice, audioProc);
 }
 #include <stdio.h>
-unsigned read_s16_samples(audiopipein *ap, short *samples, unsigned maxFrameCount)
-{
-  unsigned samplesRead, loop;
-  float *fsamples = (float*)alloca(2048 * sizeof(float));
-  if (maxFrameCount > 2048) maxFrameCount = 2048;
-  samplesRead = read_float_samples(ap, fsamples, maxFrameCount);
 
-  loop = samplesRead;
-  while (loop-- > 0) {
-    *samples++ = *fsamples++ * 32768.0;
-  }
-  return samplesRead;
+#define DECLARE(NAME, TYPE, ADDITOR, MULTIPLIER) \
+unsigned NAME(audiopipein *ap, TYPE samples[], unsigned maxFrameCount) { \
+  unsigned samplesRead, loop; \
+  float *fsamples = (float*)alloca(2048 * sizeof(float)); \
+  if (maxFrameCount > 2048) maxFrameCount = 2048; \
+  samplesRead = read_float_samples(ap, fsamples, maxFrameCount); \
+  loop = samplesRead; \
+  while (loop-- > 0) { \
+    *samples++ = *fsamples++ * MULTIPLIER + ADDITOR; \
+  } \
+  return samplesRead; \
 }
+
+DECLARE(read_s8_samples, char, 0, 0x7f)
+DECLARE(read_s16_samples, short, 0, 0x7fff)
+DECLARE(read_s32_samples, long, 0, 0x7fffffff)
+DECLARE(read_u8_samples, unsigned char, 0x80, 0x7f)
+DECLARE(read_u16_samples, unsigned short, 0x8000, 0x7fff)
+DECLARE(read_u32_samples, unsigned long, ((unsigned)0x80000000), 0x7fffffff)
 
 unsigned read_float_samples(audiopipein *ap, float *samples, unsigned maxFrameCount)
 {

@@ -31,9 +31,31 @@
 static char *tool;
 
 static void usage() {
-  printf("usage: %s [-c channelCount (1 or 2)] [-s|-u|-f] [-b|-w|-l] [-x] [-r rate]\n", tool);
+  fprintf(stderr, "usage: %s [-c channelCount (1 or 2)] [-s|-u|-f] [-b|-w|-l] [-x] [-r rate]\n", tool);
   exit(1);
 }
+
+/* utilities */
+void swap_16_samples(short samples[], unsigned frameCount) {
+  while (frameCount-->0) {
+    short s = *samples;
+    short newS = ((s&0xff) << 8) | ((s&0xff00) >> 8);
+    *samples++ = newS;
+  }
+}
+
+void swap_32_samples(long samples[], unsigned frameCount) {
+  while (frameCount-->0) {
+    long s = *samples;
+    long newS = ((s&0xff) << 24) | ((s&0xff00) << 8) | ((s&0xff0000) >> 8) | ((s&0xff000000) >> 24);
+    *samples++ = newS;
+  }
+}
+
+#define MAX_FRAME_COUNT 4096
+#define MAX_FRAME_SIZE (sizeof(float))
+
+typedef unsigned (*ReadSamplesFunction)(audiopipein *, void *samples, unsigned maxFrameCount);
 
 int main(int argc, char *argv[]) {
   char ch;
@@ -43,7 +65,8 @@ int main(int argc, char *argv[]) {
   int channelCount = 2;
   float sampleRate = 44100;
   int bytesPerSample = 2;
-
+  char sampleBuffer[MAX_FRAME_COUNT * MAX_FRAME_SIZE];
+  ReadSamplesFunction readSamplesFunction;
   audiopipein ap;
 
   tool = argv[0];
@@ -92,15 +115,36 @@ int main(int argc, char *argv[]) {
     usage();
   }
 
+  switch (sampleFormat) {
+    char buf[4096*8];
+    unsigned count;
+    
+  case SIGNED:
+    if (bytesPerSample == 1) readSamplesFunction = (ReadSamplesFunction)read_s8_samples;
+    else if (bytesPerSample == 2) readSamplesFunction = (ReadSamplesFunction)read_s16_samples;
+    else if (bytesPerSample == 4) readSamplesFunction = (ReadSamplesFunction)read_s32_samples;
+    break;
+  case UNSIGNED:
+    if (bytesPerSample == 1) readSamplesFunction = (ReadSamplesFunction)read_u8_samples;
+    else if (bytesPerSample == 2) readSamplesFunction = (ReadSamplesFunction)read_u16_samples;
+    else if (bytesPerSample == 4) readSamplesFunction = (ReadSamplesFunction)read_u32_samples;
+    break;
+  case FLOAT:
+    readSamplesFunction = (ReadSamplesFunction)read_float_samples;
+  }
+
   if ((channelCount < 1) || (channelCount > 2)) usage();
 
-  init_audiopipein(&ap, sampleRate, channelCount == 1, 4096);
+  init_audiopipein(&ap, sampleRate, channelCount == 1, MAX_FRAME_COUNT);
 
   while (1) {
-    short samples[4096];
-    unsigned frames = read_s16_samples(&ap, samples, 4096);
+    unsigned frames = readSamplesFunction(&ap, sampleBuffer, MAX_FRAME_COUNT);
+    if (swapEndian) {
+      if (bytesPerSample == 2) swap_16_samples((short*)sampleBuffer, frames);
+      if (bytesPerSample == 4) swap_32_samples((long*)sampleBuffer, frames);
+    }
     fprintf(stderr, "Read %d frames\n", frames);
-    write(1, samples, frames * sizeof(short));
+    write(1, sampleBuffer, frames * bytesPerSample);
   }
 
   while (1) sleep(5);
