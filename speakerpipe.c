@@ -28,11 +28,21 @@
 #include <unistd.h>
 #include "audiopipeout.h"
 #include "swap.h"
+#include "version.h"
 
 static char *tool;
 
 static void usage() {
-  printf("usage: %s [-c channelCount (1 or 2)] [-s|-u|-f] [-b|-w|-l] [-x] [-r rate]\n", tool);
+  fprintf(stderr, "usage: %s [-v] [-c channelCount (1 or 2)] [-s|-u|-f] [-b|-w|-l] [-x] [-r rate]\n", tool);
+  fprintf(stderr, " -v : show version and exit\n");
+  fprintf(stderr, " -s : signed samples\n");
+  fprintf(stderr, " -u : unsigned\n");
+  fprintf(stderr, " -f : float\n");
+  fprintf(stderr, " -b : 1 byte per sample\n");
+  fprintf(stderr, " -w : 2 bytes per sample\n");
+  fprintf(stderr, " -l : 4 bytes per sample\n");
+  fprintf(stderr, " -x : use opposite endian\n");
+  fprintf(stderr, " -r : sample rate, defaults to 44.1 kHz\n");
   exit(1);
 }
 
@@ -48,8 +58,12 @@ int main(int argc, char *argv[]) {
   audiopipeout ap;
 
   tool = argv[0];
-  while ((ch = getopt(argc, argv, "c:sufbwlxr:")) != -1)
+  while ((ch = getopt(argc, argv, "c:sufbwlxr:v")) != -1)
     switch(ch) {
+    case 'v':
+      fprintf(stderr, "%s version %s\n", tool, VERSION);
+      exit(-1);
+      break;
     case 'c':
       channelCount = atoi(optarg);
       break;
