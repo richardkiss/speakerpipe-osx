@@ -26,6 +26,7 @@
 #include <CoreAudio/AudioHardware.h>
 #include <stdio.h>
 #include <unistd.h>
+#include "threadedqueue.h"
 
 enum { U8BIT_SAMPLE, S8BIT_SAMPLE,
        U16BIT_SAMPLE, S16BIT_SAMPLE,
@@ -42,10 +43,11 @@ int sampleRate = 44100;
 int bytesPerSample = 2;
 
 int sampleRepeatCount;
-UInt32 bufferSizeInBytes = 65536;
+UInt32 bufferSizeInBytes;
 int readBufferSizeInBytes;
 char *readBuffer;
-int isStopping = 0;
+
+threadedqueue tq;
 
 static OSStatus audioProc(AudioDeviceID 	inDevice,
 			  const AudioTimeStamp*	inNow,
@@ -66,19 +68,15 @@ static OSStatus audioProc(AudioDeviceID 	inDevice,
     float *fsrc;
     float sample;
     int r;
+    static int isStopping = 0;
 
     if (isStopping) exit(1);
 
-    while (readByteCount<readBufferSizeInBytes) {
-      int count = fread(src+readByteCount, 1, readBufferSizeInBytes - readByteCount, stdin);
-      readByteCount += count;
-      if (count == 0) {
-	/* EOF -- stop next time through */
-	bzero(src + readByteCount, readBufferSizeInBytes - readByteCount);
-	readByteCount = readBufferSizeInBytes;
-	isStopping = 1;
-	break;
-      }
+    readByteCount = removeBytesTo(&tq, readBuffer, readBufferSizeInBytes, readBufferSizeInBytes);
+
+    if (readByteCount < readBufferSizeInBytes) {
+      isStopping = 1;
+      bzero(readBuffer + readByteCount, readBufferSizeInBytes - readByteCount);
     }
 
     switch (sampleType) {
@@ -145,7 +143,7 @@ static OSStatus audioProc(AudioDeviceID 	inDevice,
       srcSamples = readByteCount >> 2;
       lsrc = (signed long*)src;
       while (srcSamples-->0) {
-	sample = ((signed long)(*lsrc++ - 2147483648)) / 2147483648.0;
+	sample = ((signed long)(*lsrc++ - 0x80000000)) / 2147483648.0;
 	r = sampleRepeatCount;
 	while (r-->0) *dst++ = sample;
       }
@@ -165,7 +163,7 @@ static OSStatus audioProc(AudioDeviceID 	inDevice,
       while (srcSamples-->0) {
 	r = *lsrc++;
 	r = (unsigned long)((r&0xff)<<24) | ((r&0xff00)<<8) | ((r&0xff0000) >> 8) | ((r&0xff000000)>>24);
-	sample = ((signed long)(r - 2147483648)) / 2147483648.0;
+	sample = ((signed long)(r - 0x80000000)) / 2147483648.0;
 	r = sampleRepeatCount;
 	while (r-->0) *dst++ = sample;
       }
@@ -310,10 +308,19 @@ int main(int argc, char *argv[]) {
   readBufferSizeInBytes = ((((bytesPerSample * bufferSizeInBytes + (sizeof(float)-1)) / sizeof(float)) + sampleRepeatCount-1)) / sampleRepeatCount;
   readBuffer = (char*)malloc(readBufferSizeInBytes);
 
+  init_threadedqueue(&tq, 65536);
+
   s = AudioDeviceAddIOProc(outputDevice, audioProc, NULL);
   s = AudioDeviceStart(outputDevice, audioProc);
 
   while (1) {
-    sleep(5);
+    char buf[4096];
+    int count = fread(buf, 1, 4096, stdin);
+    addBytes(&tq, buf, count);
+    if (count == 0) {
+      end_of_queue(&tq);
+      while (1) sleep(5);
+    }
   }
 }
+
