@@ -26,175 +26,7 @@
 #include <CoreAudio/AudioHardware.h>
 #include <stdio.h>
 #include <unistd.h>
-#include "threadedqueue.h"
-
-enum { U8BIT_SAMPLE, S8BIT_SAMPLE,
-       U16BIT_SAMPLE, S16BIT_SAMPLE,
-       U16BIT_SE_SAMPLE, S16BIT_SE_SAMPLE,
-       U32BIT_SAMPLE, S32BIT_SAMPLE,
-       U32BIT_SE_SAMPLE, S32BIT_SE_SAMPLE,
-       FLOAT_SAMPLE };
-
-int sampleType;
-
-int channelCount = 2;
-int sampleRate = 44100;
-
-int bytesPerSample = 2;
-
-int sampleRepeatCount;
-UInt32 bufferSizeInBytes;
-int readBufferSizeInBytes;
-char *readBuffer;
-
-threadedqueue tq;
-
-static OSStatus audioProc(AudioDeviceID 	inDevice,
-			  const AudioTimeStamp*	inNow,
-			  const AudioBufferList*inInputData,
-			  const AudioTimeStamp*	inInputTime,
-			  AudioBufferList*	outOutputData, 
-			  const AudioTimeStamp*	inOutputTime,
-			  void* 		inClientData)
-{
-    AudioBuffer *buffer = outOutputData->mBuffers;
-    float *dst = (float *)buffer->mData;
-    char *src = readBuffer;
-    unsigned readByteCount = 0;
-    unsigned srcSamples;
-    signed char *scsrc;
-    short *ssrc;
-    long *lsrc;
-    float *fsrc;
-    float sample;
-    int r;
-    static int isStopping = 0;
-
-    if (isStopping) exit(1);
-
-    readByteCount = removeBytesTo(&tq, readBuffer, readBufferSizeInBytes, readBufferSizeInBytes);
-
-    if (readByteCount < readBufferSizeInBytes) {
-      isStopping = 1;
-      bzero(readBuffer + readByteCount, readBufferSizeInBytes - readByteCount);
-    }
-
-    switch (sampleType) {
-    case U8BIT_SAMPLE:
-      srcSamples = readByteCount;
-      scsrc = (signed char*)src;
-      while (srcSamples-->0) {
-	  sample = ((signed char)(*scsrc++ - 128)) / 128.0;
-	  r = sampleRepeatCount;
-	  while (r-->0) *dst++ = sample;
-      }
-      break;
-    case S8BIT_SAMPLE:
-      srcSamples = readByteCount;
-      scsrc = (signed char*)src;
-      while (srcSamples-->0) {
-	sample = (*scsrc++) / 128.0;
-	r = sampleRepeatCount;
-	while (r-->0) *dst++ = sample;
-      }
-      break;
-    case U16BIT_SAMPLE:
-      srcSamples = readByteCount >> 1;
-      ssrc = (signed short*)src;
-      while (srcSamples-->0) {
-	sample = ((signed short)(*ssrc++ - 32768)) / 32768.0;
-	r = sampleRepeatCount;
-	while (r-->0) *dst++ = sample;
-      }
-      break;
-    case S16BIT_SAMPLE:
-      srcSamples = readByteCount >> 1;
-      ssrc = (signed short*)src;
-      while (srcSamples-->0) {
-	sample = *ssrc++ / 32768.0;
-	r = sampleRepeatCount;
-	while (r-->0) *dst++ = sample;
-      }
-      break;
-    case U16BIT_SE_SAMPLE:
-      srcSamples = readByteCount >> 1;
-      ssrc = (signed short*)src;
-      while (srcSamples-->0) {
-	r = *ssrc++;
-	r = (unsigned short)((r&0xff)<<8) | ((r&0xff00)>>8);
-	sample = ((signed short)(r - 32768)) / 32768.0;
-	r = sampleRepeatCount;
-	while (r-->0) *dst++ = sample;
-      }
-      break;
-    case S16BIT_SE_SAMPLE:
-      srcSamples = readByteCount >> 1;
-      ssrc = (signed short*)src;
-      while (srcSamples-->0) {
-	r = *ssrc++;
-	r = (short)((r&0xff)<<8) | ((r&0xff00)>>8);
-	sample = r / 32768.0;
-	r = sampleRepeatCount;
-	while (r-->0) *dst++ = sample;
-      }
-      break;
-
-    case U32BIT_SAMPLE:
-      srcSamples = readByteCount >> 2;
-      lsrc = (signed long*)src;
-      while (srcSamples-->0) {
-	sample = ((signed long)(*lsrc++ - 0x80000000)) / 2147483648.0;
-	r = sampleRepeatCount;
-	while (r-->0) *dst++ = sample;
-      }
-      break;
-    case S32BIT_SAMPLE:
-      srcSamples = readByteCount >> 2;
-      lsrc = (signed long*)src;
-      while (srcSamples-->0) {
-	sample = *lsrc++ / 2147483648.0;
-	r = sampleRepeatCount;
-	while (r-->0) *dst++ = sample;
-      }
-      break;
-    case U32BIT_SE_SAMPLE:
-      srcSamples = readByteCount >> 2;
-      lsrc = (signed long*)src;
-      while (srcSamples-->0) {
-	r = *lsrc++;
-	r = (unsigned long)((r&0xff)<<24) | ((r&0xff00)<<8) | ((r&0xff0000) >> 8) | ((r&0xff000000)>>24);
-	sample = ((signed long)(r - 0x80000000)) / 2147483648.0;
-	r = sampleRepeatCount;
-	while (r-->0) *dst++ = sample;
-      }
-      break;
-    case S32BIT_SE_SAMPLE:
-      srcSamples = readByteCount >> 2;
-      lsrc = (signed long*)src;
-      while (srcSamples-->0) {
-	r = *lsrc++;
-	r = (unsigned long)((r&0xff)<<24) | ((r&0xff00)<<8) | ((r&0xff0000) >> 8) | ((r&0xff000000)>>24);
-	sample = r / 2147483648.0;
-	r = sampleRepeatCount;
-	while (r-->0) *dst++ = sample;
-      }
-      break;
-    case FLOAT_SAMPLE:
-      srcSamples = readByteCount >> 2;
-      fsrc = (float*)src;
-      while (srcSamples-->0) {
-	sample = *fsrc++;
-	r = sampleRepeatCount;
-	while (r-->0) *dst++ = sample;
-      }
-      break;
-    default:
-      break;
-    }
-
-    return 0;
-}
-
+#include "audiopipeout.h"
 
 static char *tool;
 
@@ -203,20 +35,16 @@ static void usage() {
   exit(1);
 }
 
-#define false 0
-#define true 1
-
 int main(int argc, char *argv[]) {
-  float ratio;
   char ch;
   enum { SIGNED, UNSIGNED, FLOAT };
   int swapEndian = 0;
   int sampleFormat = SIGNED;
+  int channelCount = 2;
+  float sampleRate = 44100;
+  int bytesPerSample = 2;
 
-  OSStatus s;
-  AudioDeviceID outputDevice;
-  Boolean writeable;
-  UInt32 ioPropertyDataSize;
+  audiopipeout ap;
 
   tool = argv[0];
   while ((ch = getopt(argc, argv, "c:sufbwlxr:")) != -1)
@@ -247,7 +75,7 @@ int main(int argc, char *argv[]) {
       swapEndian = 1;
       break;
     case 'r':
-      sampleRate = atoi(optarg);
+      sampleRate = atof(optarg);
       break;
     case '?':
     default:
@@ -256,71 +84,50 @@ int main(int argc, char *argv[]) {
   argc -= optind;
   argv += optind;
 
+  if (optind > 0) usage();
+
   /* figure sample type */
   if ((sampleFormat == FLOAT) && (swapEndian)) {
     fprintf(stderr, "Can't use swap (-x) with float (-f)\n");
     usage();
   }
-  switch (sampleFormat) {
-  case SIGNED:
-    if (bytesPerSample == 1) sampleType = S8BIT_SAMPLE;
-    else if (bytesPerSample == 2) {
-      if (swapEndian) sampleType = S16BIT_SE_SAMPLE;
-      else sampleType = S16BIT_SAMPLE;
-    }
-    else if (bytesPerSample == 4) {
-      if (swapEndian) sampleType = S32BIT_SE_SAMPLE;
-      else sampleType = S32BIT_SAMPLE;
-    }
-    break;
-  case UNSIGNED:
-    if (bytesPerSample == 1) sampleType = U8BIT_SAMPLE;
-    else if (bytesPerSample == 2) {
-      if (swapEndian) sampleType = U16BIT_SE_SAMPLE;
-      else sampleType = U16BIT_SAMPLE;
-    }
-    else if (bytesPerSample == 4) {
-      if (swapEndian) sampleType = U32BIT_SE_SAMPLE;
-      else sampleType = U32BIT_SAMPLE;
-    }
-    break;
-  case FLOAT:
-    sampleType = FLOAT_SAMPLE;
-  }
-
-  ratio = (44100.0 / sampleRate);
-  if (ratio > (int)ratio) usage();
 
   if ((channelCount < 1) || (channelCount > 2)) usage();
 
-  /* figure sampleRepeatCount */
-  sampleRepeatCount = ratio * 2 / channelCount;
+  init_audiopipeout(&ap, sampleRate, channelCount == 1, 131072);
 
-  s = AudioHardwareGetPropertyInfo(kAudioHardwarePropertyDefaultOutputDevice, &ioPropertyDataSize, &writeable);
+  /* a couple of macros to make life easier */
 
-  s = AudioHardwareGetProperty(kAudioHardwarePropertyDefaultOutputDevice, &ioPropertyDataSize, &outputDevice);
+#define FEEDLOOP(BUFFERTYPE, WRITE) \
+while (1) {\
+    count = fread(buf, bytesPerSample, 4096, stdin);\
+    if (count == 0) break;\
+    WRITE(&ap, (BUFFERTYPE*)buf, count);}
 
-  s = AudioDeviceGetPropertyInfo(outputDevice, 0, false, kAudioDevicePropertyBufferSize, &ioPropertyDataSize, &writeable);
-  if (sizeof(bufferSizeInBytes) <= ioPropertyDataSize) {
-    s = AudioDeviceGetProperty(outputDevice, 0, false, kAudioDevicePropertyBufferSize, &ioPropertyDataSize, &bufferSizeInBytes);
+#define FEEDSWAPLOOP(BUFFERTYPE, SWAP, WRITE) \
+while (1) {\
+    count = fread(buf, bytesPerSample, 4096, stdin);\
+    if (count == 0) break;\
+    if (swapEndian) SWAP((BUFFERTYPE*)buf, count);\
+    WRITE(&ap, (BUFFERTYPE*)buf, count);}
+
+  switch (sampleFormat) {
+    char buf[4096*8];
+    unsigned count;
+    
+  case SIGNED:
+    if (bytesPerSample == 1) FEEDLOOP(char, write_s8_samples)
+    else if (bytesPerSample == 2) FEEDSWAPLOOP(short, swap_16_samples, write_s16_samples)
+    else if (bytesPerSample == 4) FEEDSWAPLOOP(long, swap_32_samples, write_s32_samples);
+    break;
+  case UNSIGNED:
+    if (bytesPerSample == 1) FEEDLOOP(char, write_u8_samples)
+    else if (bytesPerSample == 2) FEEDSWAPLOOP(unsigned short, swap_16_samples, write_u16_samples)
+    else if (bytesPerSample == 4) FEEDSWAPLOOP(unsigned long, swap_32_samples, write_u32_samples);
+    break;
+  case FLOAT:
+    FEEDLOOP(float, write_float_samples);
   }
 
-  readBufferSizeInBytes = ((((bytesPerSample * bufferSizeInBytes + (sizeof(float)-1)) / sizeof(float)) + sampleRepeatCount-1)) / sampleRepeatCount;
-  readBuffer = (char*)malloc(readBufferSizeInBytes);
-
-  init_threadedqueue(&tq, 65536);
-
-  s = AudioDeviceAddIOProc(outputDevice, audioProc, NULL);
-  s = AudioDeviceStart(outputDevice, audioProc);
-
-  while (1) {
-    char buf[4096];
-    int count = fread(buf, 1, 4096, stdin);
-    addBytes(&tq, buf, count);
-    if (count == 0) {
-      end_of_queue(&tq);
-      while (1) sleep(5);
-    }
-  }
+  while (1) sleep(5);
 }
-

@@ -1,7 +1,8 @@
-OBJS=speakerpipe.o threadedqueue.o
+OBJS=speakerpipe.o threadedqueue.o audiopipeout.o resampler.o
+CFLAGS=-g
 
 speakerpipe: $(OBJS)
-	$(CC) -o $@ $(OBJS) -framework CoreAudio
+	$(CC) -g -o $@ $(OBJS) -framework CoreAudio
 
 clean:
 	rm -rf $(OBJS) speakerpipe
