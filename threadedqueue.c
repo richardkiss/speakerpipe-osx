@@ -169,7 +169,6 @@ unsigned removeBytesTo(threadedqueue *q, void *bytesPtr, unsigned minimum, unsig
   unsigned available;
 
   do {
-    unsigned bytesToReturn;
     unsigned bytesAvailableAtEnd;
     if (minimum > 0) waitForMinimumBytes(q, minimum);
 

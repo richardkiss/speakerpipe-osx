@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include "audiopipeout.h"
+#include "swap.h"
 
 static char *tool;
 

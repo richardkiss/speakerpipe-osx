@@ -23,8 +23,8 @@
  *
  */
 
-#ifndef __Resampler_h__
-#define __Resampler_h__
+#ifndef __resampler_h__
+#define __resampler_h__
 
 typedef void (*outputCallback)(void *context, const float *resampledData, unsigned resampledDataCount);
 
@@ -39,16 +39,16 @@ typedef struct
     unsigned outBufferSize;
     unsigned outBufferUsed;
     float *outBuffer;
-} Resampler;
+} resampler;
 
-Resampler *createResampler(float inputRate, float outputRate, outputCallback callback);
-void destroyResampler(Resampler *rs);
-void setContext(Resampler *rs, void *context);
-void scaleData(Resampler *rs, float *inputData, unsigned inputDataCount);
-void flushBuffer(Resampler *rs);
-void setBufferSize(Resampler *rs, unsigned newSize);
+resampler *resampler_new(float inputRate, float outputRate, outputCallback callback);
+void resampler_free(resampler *rs);
+void resampler_set_context(resampler *rs, void *context);
+void resampler_scale_data(resampler *rs, float *inputData, unsigned inputDataCount);
+void resampler_flush(resampler *rs);
+void resampler_set_buffer_size(resampler *rs, unsigned newSize);
 
-unsigned getAvailableData(Resampler *rs, float **bufferReference);
-void clearAvailableData(Resampler *rs);
+unsigned resampler_get_available_data(resampler *rs, float **bufferReference);
+void resampler_clear_available_data(resampler *rs);
 
-#endif // __Resampler_h__
+#endif /* __resampler_h__ */

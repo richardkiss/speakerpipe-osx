@@ -25,6 +25,7 @@
 
 #include "audiopipeout.h"
 #include <CoreAudio/CoreAudio.h>
+#include <string.h>
 
 static OSStatus audioProc(AudioDeviceID inDevice,
 			  const AudioTimeStamp *inNow,
@@ -51,9 +52,6 @@ static void resamplerCallback(void *context, const float *resampledData, unsigne
   addBytes(tq, resampledData, resampledDataCount * sizeof(float));
 }
 
-#define false 0
-#define true 1
-
 void init_audiopipeout(audiopipeout *ap, float rate, int isMono, int frameBufferSize)
 {
   OSStatus s;
@@ -65,9 +63,9 @@ void init_audiopipeout(audiopipeout *ap, float rate, int isMono, int frameBuffer
   if (isMono) rate = rate / 2.0;
   ap->resampler = NULL;
   if (rate != 44100.0) {
-    ap->resampler = createResampler(rate, 44100.0, resamplerCallback);
-    setBufferSize(ap->resampler, 1024);
-    setContext(ap->resampler, ap);
+    ap->resampler = resampler_new(rate, 44100.0, resamplerCallback);
+    resampler_set_buffer_size(ap->resampler, 1024);
+    resampler_set_context(ap->resampler, ap);
   }
   s = AudioHardwareGetPropertyInfo(kAudioHardwarePropertyDefaultOutputDevice, &ioPropertyDataSize, &writeable);
 
@@ -108,29 +106,10 @@ void write_float_samples(audiopipeout *ap, float samples[], unsigned frameCount)
 {
   /* should we adjust for rate shift? */
   if (ap->resampler != NULL) {
-    scaleData(ap->resampler, samples, frameCount);
-    flushBuffer(ap->resampler);
+    resampler_scale_data(ap->resampler, samples, frameCount);
+    resampler_flush(ap->resampler);
   } else {
     addBytes(&ap->tq, samples, frameCount * sizeof(float));
-  }
-}
-
-/* utilities */
-void swap_16_samples(short samples[], unsigned frameCount)
-{
-  while (frameCount-->0) {
-    short s = *samples;
-    short newS = ((s&0xff) << 8) | ((s&0xff00) >> 8);
-    *samples++ = newS;
-  }
-}
-
-void swap_32_samples(long samples[], unsigned frameCount)
-{
-  while (frameCount-->0) {
-    long s = *samples;
-    long newS = ((s&0xff) << 24) | ((s&0xff00) << 8) | ((s&0xff0000) >> 8) | ((s&0xff000000) >> 24);
-    *samples++ = newS;
   }
 }
 
@@ -142,5 +121,6 @@ void wait_until_done(audiopipeout *ap)
 void destroy_audiopipeout(audiopipeout *ap)
 {
   destroy_threadedqueue(&ap->tq);
-  if (ap->resampler) destroyResampler(ap->resampler);
+  if (ap->resampler) resampler_free(ap->resampler);
 }
+

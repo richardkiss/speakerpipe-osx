@@ -45,23 +45,12 @@ static OSStatus audioProc(AudioDeviceID 	inDevice,
   float *samples = (float*)inInputData->mBuffers[0].mData;
 
   if (ap->resampler != NULL) {
-    scaleData(ap->resampler, samples, byteCount / sizeof(float));
-    flushBuffer(ap->resampler);
+    resampler_scale_data(ap->resampler, samples, byteCount / sizeof(float));
+    resampler_flush(ap->resampler);
   } else {
     addBytes(&ap->tq, samples, byteCount);
   }
-  
-  /* TODO -- pipe data into the threaded queue */
-  /*
-    BOOL shouldContinue = [pipe->callbackObject gotAudioBytes:(float*)inInputData->mBuffers[0].mData withSize:inInputData->mBuffers[0].mDataByteSize withContext:pipe->callbackContext];
-
-    if (!shouldContinue)
-    {
-        // turn it off!
-        AudioDeviceStop(inDevice, audioProc);
-    }
-    */
-    return 0;
+  return 0;
 }
 
 void init_audiopipein(audiopipein *ap, float rate, int isMono, int frameBufferSize)
@@ -75,9 +64,9 @@ void init_audiopipein(audiopipein *ap, float rate, int isMono, int frameBufferSi
   if (isMono) rate = rate / 2.0;
   ap->resampler = NULL;
   if (rate != 44100.0) {
-    ap->resampler = createResampler(44100.0, rate, resamplerCallback);
-    setBufferSize(ap->resampler, 1024);
-    setContext(ap->resampler, ap);
+    ap->resampler = resampler_new(44100.0, rate, resamplerCallback);
+    resampler_set_buffer_size(ap->resampler, 1024);
+    resampler_set_context(ap->resampler, ap);
   }
   s = AudioHardwareGetPropertyInfo(kAudioHardwarePropertyDefaultInputDevice, &ioPropertyDataSize, &writeable);
 
@@ -86,7 +75,6 @@ void init_audiopipein(audiopipein *ap, float rate, int isMono, int frameBufferSi
   s = AudioDeviceAddIOProc(inputDevice, audioProc, ap);
   s = AudioDeviceStart(inputDevice, audioProc);
 }
-#include <stdio.h>
 
 #define DECLARE(NAME, TYPE, ADDITOR, MULTIPLIER) \
 unsigned NAME(audiopipein *ap, TYPE samples[], unsigned maxFrameCount) { \
@@ -118,104 +106,9 @@ unsigned read_float_samples(audiopipein *ap, float *samples, unsigned maxFrameCo
   return bytesToMove / sizeof(float);
 }
 
-
-#if 0
-#define kMinMax 1024
-#define kDefaultCapacity 163840
-
-@implementation AudioInputPipe
-
-static OSStatus audioProc(AudioDeviceID 	inDevice,
-                const AudioTimeStamp*	inNow,
-		const AudioBufferList*	inInputData,
-		const AudioTimeStamp*	inInputTime,
-		AudioBufferList* 	outOutputData, 
-		const AudioTimeStamp*	inOutputTime,
-		void*			inClientData)
+void destroy_audiopipein(audiopipein *ap)
 {
-    AudioInputPipe *pipe = (AudioInputPipe *)inClientData;
-
-    BOOL shouldContinue = [pipe->callbackObject gotAudioBytes:(float*)inInputData->mBuffers[0].mData withSize:inInputData->mBuffers[0].mDataByteSize withContext:pipe->callbackContext];
-
-    if (!shouldContinue)
-    {
-        // turn it off!
-        AudioDeviceStop(inDevice, audioProc);
-    }
-    return 0;
+  destroy_threadedqueue(&ap->tq);
+  if (ap->resampler) resampler_free(ap->resampler);
 }
 
--(void)precacheValues
-{
-    OSStatus s;
-    UInt32 ioPropertyDataSize;
-    Boolean writeable;
-    AudioDeviceID inputDevice;
-    s = AudioHardwareGetPropertyInfo(kAudioHardwarePropertyDefaultInputDevice, &ioPropertyDataSize, &writeable);
-    s = AudioHardwareGetProperty(kAudioHardwarePropertyDefaultInputDevice, &ioPropertyDataSize, &inputDevice);
-    s = AudioDeviceGetPropertyInfo(inputDevice, 0, false, kAudioDevicePropertyBufferSize, &ioPropertyDataSize, &writeable);
-
-    if (sizeof(bufferSizeInBytes) <= ioPropertyDataSize)
-    {
-        s = AudioDeviceGetProperty(inputDevice, 0, false, kAudioDevicePropertyBufferSize, &ioPropertyDataSize, &bufferSizeInBytes);
-    }
-}
-
--(id)initWithObject:(id)anObject withContext:(id)aContext
-{
-    [super init];
-    callbackObject = [anObject retain];
-    callbackContext = [aContext retain];
-    [self precacheValues];
-    return self;
-}
-
--(void)dealloc
-{
-    [callbackObject release];
-    [callbackContext release];
-    [super dealloc];
-}
-
--(void)startAudio:(double)aSampleRate
-{
-    OSStatus s;
-    AudioStreamBasicDescription asbd;
-    AudioDeviceID inputDevice;
-    Boolean writeable;
-    UInt32 ioPropertyDataSize;
-    
-    s = AudioHardwareGetPropertyInfo(kAudioHardwarePropertyDefaultInputDevice, &ioPropertyDataSize, &writeable);
-
-    s = AudioHardwareGetProperty(kAudioHardwarePropertyDefaultInputDevice, &ioPropertyDataSize, &inputDevice);
-
-    s = AudioDeviceGetPropertyInfo(inputDevice, 0, false, kAudioDevicePropertyBufferSize, &ioPropertyDataSize, &writeable);
-    if (sizeof(bufferSizeInBytes) <= ioPropertyDataSize)
-    {
-        s = AudioDeviceGetProperty(inputDevice, 0, false, kAudioDevicePropertyBufferSize, &ioPropertyDataSize, &bufferSizeInBytes);
-    }
-    s = AudioDeviceGetPropertyInfo(inputDevice, 0, false, kAudioDevicePropertyDeviceIsRunning, &ioPropertyDataSize, &writeable);
-    s = AudioDeviceGetProperty(inputDevice, 0, false, kAudioDevicePropertyDeviceIsRunning, &ioPropertyDataSize, &writeable);
-
-    s = AudioDeviceGetPropertyInfo(inputDevice, 0, false, kAudioDevicePropertyStreamFormat, &ioPropertyDataSize, &writeable);
-    s = AudioDeviceGetProperty(inputDevice, 0, false, kAudioDevicePropertyStreamFormat, &ioPropertyDataSize, &asbd);
-
-    asbd.mSampleRate = aSampleRate;
-
-    s = AudioDeviceSetProperty(inputDevice, NULL, 0, false, kAudioDevicePropertyStreamFormat, sizeof(asbd), &asbd);
-NSLog(@"asbd: %f, %d", aSampleRate, s);
-
-    s = AudioDeviceAddIOProc(inputDevice, audioProc, self);
-
-    s = AudioDeviceStart(inputDevice, audioProc);
-}
-
-+(id)listenWithSampleRateInHZ:(unsigned)aHZ withObject:(id<AudioInputCallback>)anObject withContext:(id)aContext
-{
-    id ai = [[[self alloc] initWithObject:anObject withContext:aContext] autorelease];
-    [ai startAudio:aHZ];
-    return ai;
-}
-
-@end
-#endif

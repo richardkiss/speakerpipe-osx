@@ -27,9 +27,9 @@
 #include <assert.h>
 #include <stdlib.h>
 
-Resampler *createResampler(float inputRate, float outputRate, outputCallback callback)
+resampler *resampler_new(float inputRate, float outputRate, outputCallback callback)
 {
-    Resampler *rs = (Resampler *)malloc(sizeof(Resampler));
+    resampler *rs = (resampler *)malloc(sizeof(resampler));
     rs->inputRate = inputRate;
     rs->outputRate = outputRate;
     rs->context = NULL;
@@ -42,18 +42,18 @@ Resampler *createResampler(float inputRate, float outputRate, outputCallback cal
     return rs;
 }
 
-void destroyResampler(Resampler *rs)
+void resampler_free(resampler *rs)
 {
     free(rs->outBuffer);
     free(rs);
 }
 
-void setContext(Resampler *rs, void *context)
+void resampler_set_context(resampler *rs, void *context)
 {
     rs->context = context;
 }
 
-void scaleData(Resampler *rs, float *inputData, unsigned inputDataCount)
+void resampler_scale_data(resampler *rs, float *inputData, unsigned inputDataCount)
 {
     unsigned outputDataCount = rs->outBufferUsed;
     float currentSampleCountRemaining = rs->currentSampleCountRemaining;
@@ -109,27 +109,27 @@ void scaleData(Resampler *rs, float *inputData, unsigned inputDataCount)
     rs->outBufferUsed = outputDataCount;
 }
 
-void flushBuffer(Resampler *rs)
+void resampler_flush(resampler *rs)
 {
     assert(rs->outBuffer != NULL);
     rs->callback(rs->context, rs->outBuffer, rs->outBufferUsed);
     rs->outBufferUsed = 0;
 }
 
-void setBufferSize(Resampler *rs, unsigned newSize)
+void resampler_set_buffer_size(resampler *rs, unsigned newSize)
 {
-    if (newSize < rs->outBufferUsed) flushBuffer(rs);
+    if (newSize < rs->outBufferUsed) resampler_flush(rs);
     rs->outBuffer = (float*)realloc(rs->outBuffer, newSize * sizeof(float));
     rs->outBufferSize = newSize;
 }
 
-unsigned getAvailableData(Resampler *rs, float **bufferReference)
+unsigned resampler_get_available_data(resampler *rs, float **bufferReference)
 {
     *bufferReference = rs->outBuffer;
     return rs->outBufferUsed;
 }
 
-void clearAvailableData(Resampler *rs)
+void resampler_clear_available_data(resampler *rs)
 {
     rs->outBufferUsed = 0;
 }

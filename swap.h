@@ -30,29 +30,11 @@
 */
 
 
-#ifndef __audiopipein_h__
-#define __audiopipein_h__
+#ifndef __swap_h__
+#define __swap_h__
 
-#include "threadedqueue.h"
-#include "resampler.h"
+void swap_16_samples(short samples[], unsigned frameCount);
+void swap_32_samples(long samples[], unsigned frameCount);
 
-typedef struct {
-  threadedqueue tq;
-  resampler *resampler;
-} audiopipein;
+#endif /* __swap_h__ */
 
-
-/* Larger buffers reduces dropout probability. */
-void init_audiopipein(audiopipein *ap, float rate, int isMono, int frameBufferSize);
-
-unsigned read_s8_samples(audiopipein *ap, char *samples, unsigned maxFrameCount);
-unsigned read_u8_samples(audiopipein *ap, unsigned char *samples, unsigned maxFrameCount);
-unsigned read_s16_samples(audiopipein *ap, short *samples, unsigned maxFrameCount);
-unsigned read_u16_samples(audiopipein *ap, unsigned short *samples, unsigned maxFrameCount);
-unsigned read_s32_samples(audiopipein *ap, long *samples, unsigned maxFrameCount);
-unsigned read_u32_samples(audiopipein *ap, unsigned long *samples, unsigned maxFrameCount);
-unsigned read_float_samples(audiopipein *ap, float *samples, unsigned maxFrameCount);
-
-void destroy_audiopipein(audiopipein *ap);
-
-#endif /* __audiopipein_h__ */

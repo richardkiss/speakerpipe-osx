@@ -27,29 +27,13 @@
 #include <stdio.h>
 #include <unistd.h>
 #include "audiopipein.h"
+#include "swap.h"
 
 static char *tool;
 
 static void usage() {
   fprintf(stderr, "usage: %s [-c channelCount (1 or 2)] [-s|-u|-f] [-b|-w|-l] [-x] [-r rate]\n", tool);
   exit(1);
-}
-
-/* utilities */
-void swap_16_samples(short samples[], unsigned frameCount) {
-  while (frameCount-->0) {
-    short s = *samples;
-    short newS = ((s&0xff) << 8) | ((s&0xff00) >> 8);
-    *samples++ = newS;
-  }
-}
-
-void swap_32_samples(long samples[], unsigned frameCount) {
-  while (frameCount-->0) {
-    long s = *samples;
-    long newS = ((s&0xff) << 24) | ((s&0xff00) << 8) | ((s&0xff0000) >> 8) | ((s&0xff000000) >> 24);
-    *samples++ = newS;
-  }
 }
 
 #define MAX_FRAME_COUNT 4096
@@ -116,9 +100,6 @@ int main(int argc, char *argv[]) {
   }
 
   switch (sampleFormat) {
-    char buf[4096*8];
-    unsigned count;
-    
   case SIGNED:
     if (bytesPerSample == 1) readSamplesFunction = (ReadSamplesFunction)read_s8_samples;
     else if (bytesPerSample == 2) readSamplesFunction = (ReadSamplesFunction)read_s16_samples;
@@ -143,7 +124,6 @@ int main(int argc, char *argv[]) {
       if (bytesPerSample == 2) swap_16_samples((short*)sampleBuffer, frames);
       if (bytesPerSample == 4) swap_32_samples((long*)sampleBuffer, frames);
     }
-    fprintf(stderr, "Read %d frames\n", frames);
     write(1, sampleBuffer, frames * bytesPerSample);
   }
 

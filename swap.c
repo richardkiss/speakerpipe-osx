@@ -23,30 +23,18 @@
 *
 */
 
-#ifndef __audiopipeout_h__
-#define __audiopipeout_h__
+void swap_16_samples(short samples[], unsigned frameCount) {
+  while (frameCount-->0) {
+    short s = *samples;
+    short newS = ((s&0xff) << 8) | ((s&0xff00) >> 8);
+    *samples++ = newS;
+  }
+}
 
-#include "threadedqueue.h"
-#include "resampler.h"
-
-typedef struct {
-  threadedqueue tq;
-  resampler *resampler;
-} audiopipeout;
-
-/* Larger buffers reduces dropout probability. */
-void init_audiopipeout(audiopipeout *ap, float rate, int isMono, int frameBufferSize);
-
-void write_s8_samples(audiopipeout *ap, char samples[], unsigned frameCount);
-void write_u8_samples(audiopipeout *ap, unsigned char samples[], unsigned frameCount);
-void write_s16_samples(audiopipeout *ap, short samples[], unsigned frameCount);
-void write_u16_samples(audiopipeout *ap, unsigned short samples[], unsigned frameCount);
-void write_s32_samples(audiopipeout *ap, long samples[], unsigned frameCount);
-void write_u32_samples(audiopipeout *ap, unsigned long samples[], unsigned frameCount);
-void write_float_samples(audiopipeout *ap, float samples[], unsigned frameCount);
-
-void wait_until_done(audiopipeout *ap);
-
-void destroy_audiopipeout(audiopipeout *ap);
-
-#endif /* __audiopipeout_h__ */
+void swap_32_samples(long samples[], unsigned frameCount) {
+  while (frameCount-->0) {
+    long s = *samples;
+    long newS = ((s&0xff) << 24) | ((s&0xff00) << 8) | ((s&0xff0000) >> 8) | ((s&0xff000000) >> 24);
+    *samples++ = newS;
+  }
+}

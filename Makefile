@@ -1,6 +1,6 @@
-SPKR_OBJS=speakerpipe.o threadedqueue.o audiopipeout.o resampler.o
-MIKE_OBJS=mikepipe.o threadedqueue.o audiopipein.o resampler.o
-CFLAGS=-g
+SPKR_OBJS=speakerpipe.o threadedqueue.o audiopipeout.o resampler.o swap.o
+MIKE_OBJS=mikepipe.o threadedqueue.o audiopipein.o resampler.o swap.o
+CFLAGS=-g -Wall
 
 all: mikepipe speakerpipe
 
