@@ -23,7 +23,7 @@
  *
  */
 
-#include "Resampler.h"
+#include "resampler.h"
 #include <assert.h>
 #include <stdlib.h>
 
