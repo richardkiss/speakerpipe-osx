@@ -30,8 +30,8 @@
 */
 
 
-#ifndef __audiopipeout_h__
-#define __audiopipeout_h__
+#ifndef __audiopipein_h__
+#define __audiopipein_h__
 
 #include "threadedqueue.h"
 #include "resampler.h"
@@ -59,4 +59,4 @@ void swap_32_samples(long samples[], unsigned frameCount);
 
 void destroy_audiopipein(audiopipein *ap);
 
-#endif /* __audiopipeout_h__ */
+#endif /* __audiopipein_h__ */
