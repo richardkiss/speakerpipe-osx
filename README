@@ -1,6 +1,4 @@
-This is a release of "speakerpipe" and "mikepipe", two command-line audio
-tools for Mac OS X that show how to use audio in and audio out on Mac OS
-X. 
+This is a release of "speakerpipe" and "mikepipe", two command-line audio tools for Mac OS X that show how to use audio in and audio out on Mac OS X.  
 
 The primary reason for release is to make life a little easier for
 CoreAudio framework users. The audiopipein and audiopipeout objects make
